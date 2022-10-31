@@ -3,8 +3,10 @@ use std::hash::Hash;
 use std::hash::{BuildHasher, Hasher};
 
 pub enum BucketOccupied<K, V> {
-    //Every Bucket in this scheme can either be Occupied with a key,value pair
-    //Vacant (no value) or Deleted (Lazy Deletion Scheme)
+    //Every Bucket in this scheme can either be either:
+    // 1. Occupied (with a key,value pair)
+    // 2. Vacant (no value)
+    // 3. Deleted (Lazy Deletion Scheme, removed when hashmap resized)
     Occupied((K, V)),
     Vacant,
     Deleted,
@@ -12,8 +14,8 @@ pub enum BucketOccupied<K, V> {
 
 pub struct HashMap<K, V> {
     buckets: Vec<BucketOccupied<K, V>>,
-    pub item_count: usize,
-    pub deleted_count: usize,
+    item_count: usize,
+    deleted_count: usize,
 }
 
 impl<K, V> HashMap<K, V>
@@ -81,7 +83,7 @@ where
                     //Same with Deleted
                     BucketOccupied::Deleted => return hash_location,
                     //If the Bucket is Occupied, then we need to check if the key is equal
-                    //to the search key
+                    //to the search key. Return the hash_location if the key == the current occupied key.
                     BucketOccupied::Occupied((ref ekey, _)) => {
                         if key == ekey {
                             return hash_location;
@@ -109,7 +111,8 @@ where
             new_buckets.push(BucketOccupied::Vacant);
         }
 
-        //Now populate the new buckets with the old buckets
+        let mut number_of_inserts = 0;
+
         for bucket_enum in self.buckets.drain(..) {
             if let BucketOccupied::Occupied((key, value)) = bucket_enum {
                 let mut hasher = DefaultHasher::new();
@@ -138,11 +141,13 @@ where
                     };
                 };
                 new_buckets[hash_location] = BucketOccupied::Occupied((key, value));
+                number_of_inserts += 1;
             };
         }
         //Set self.buckets to the new_buckets vec
         self.buckets = new_buckets;
         self.deleted_count = 0;
+        self.item_count = number_of_inserts;
     }
 
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
@@ -209,7 +214,7 @@ where
     }
 
     pub fn clear(&mut self) {
-        //Clear the HashMap
+        //Clear the HashMap, set everything to vacant
         let current_bucket_length = self.buckets.len();
         for index in 0..current_bucket_length {
             self.buckets.push(BucketOccupied::Vacant);
@@ -268,13 +273,16 @@ mod tests {
         dictionary.insert("foo", 45);
         dictionary.insert("bar", 46);
         dictionary.insert("baz", 47);
+        assert_eq!(dictionary.len(), 3);
         //First Delete Foo
         assert_eq!(dictionary.get(&"foo"), Some(&45));
         dictionary.remove(&"foo");
+        assert_eq!(dictionary.len(), 2);
         assert_eq!(dictionary.get(&"foo"), None);
         //Then Delete bar
         assert_eq!(dictionary.get(&"bar"), Some(&46));
         dictionary.remove(&"bar");
+        assert_eq!(dictionary.len(), 1);
         assert_eq!(dictionary.get(&"bar"), None);
         //Then delete baz
         assert_eq!(dictionary.get(&"baz"), Some(&47));
