@@ -225,6 +225,79 @@ where
     }
 }
 
+pub struct Iter<'a, K, V> {
+    //Struct to Implement as an Iterator
+    vec_of_occupied: Vec<(&'a K, &'a V)>,
+}
+
+pub struct IntoIter<K, V> {
+    //Owned Version of the Struct Iter, this will consume the HashMap
+    vec_of_occupied: Vec<(K, V)>,
+}
+
+impl<'a, K, V> Iterator for Iter<'a, K, V> {
+    type Item = (&'a K, &'a V);
+    fn next(&mut self) -> Option<Self::Item> {
+        //Because the IntoIter struct was already built with the occupied (K,V) only,
+        //we simply iterator one by one over the vec until we reach the end
+        if let Some(inner_tuple) = self.vec_of_occupied.pop() {
+            return Some(inner_tuple);
+        }
+        return None;
+    }
+}
+
+impl<K, V> Iterator for IntoIter<K, V> {
+    //Exact same logic as the borrowed version, without lifetimes or borrowing
+    type Item = (K, V);
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(inner_tuple) = self.vec_of_occupied.pop() {
+            return Some(inner_tuple);
+        }
+        return None;
+    }
+}
+
+impl<K, V> IntoIterator for HashMap<K, V> {
+    type Item = (K, V);
+    type IntoIter = IntoIter<K, V>;
+    fn into_iter(self) -> Self::IntoIter {
+        //The IntoIter Struct will only contain the Occupied (key,value) pairs
+        let mut outbound_vector = Vec::new();
+        let mut buckets_vec = self.buckets;
+        //Iterate over the HashMap, and fill the IntoIter struct with the pairs
+        for _ in 0..buckets_vec.len() {
+            if let Some(bucket_occupied_enum) = buckets_vec.pop() {
+                if let BucketOccupied::Occupied((key, value)) = bucket_occupied_enum {
+                    outbound_vector.push((key, value));
+                }
+            }
+        }
+        IntoIter {
+            vec_of_occupied: outbound_vector,
+        }
+    }
+}
+
+impl<'a, K, V> IntoIterator for &'a HashMap<K, V> {
+    type Item = (&'a K, &'a V);
+    type IntoIter = Iter<'a, K, V>;
+    fn into_iter(self) -> Self::IntoIter {
+        //The IntoIter Struct will only contain the Occupied (key,value) pairs
+        let mut outbound_vector = Vec::new();
+
+        //Iterate over the HashMap, and fill the IntoIter struct with the pairs
+        for item in self.buckets.iter() {
+            if let BucketOccupied::Occupied((key, value)) = item {
+                outbound_vector.push((key, value));
+            }
+        }
+        Iter {
+            vec_of_occupied: outbound_vector,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -323,14 +396,42 @@ mod tests {
         dictionary.insert("baz", 49);
         assert!(dictionary.contains_key(&"baz"));
     }
-}
 
-// println!("**************************");
-//         for value in dictionary.buckets.iter() {
-//             match value {
-//                 BucketOccupied::Deleted => println!("Deleted"),
-//                 BucketOccupied::Vacant => println!("Vacant"),
-//                 BucketOccupied::Occupied((key, value)) => println!("{}:{}", key, value),
-//             }
-//         }
-//         println!("**************************");
+    #[test]
+    fn into_iter_borrowed() {
+        //Test into_iter with the borrowed hashmap
+        let mut dictionary: HashMap<&str, i32> = HashMap::new();
+        //Insert foo, bar, and baz
+        dictionary.insert("foo", 45);
+        dictionary.insert("bar", 46);
+        dictionary.insert("baz", 47);
+
+        for (key, value) in &dictionary {
+            match *key {
+                "foo" => assert_eq!(value, &45),
+                "bar" => assert_eq!(value, &46),
+                "baz" => assert_eq!(value, &47),
+                _ => unreachable!(),
+            }
+        }
+    }
+
+    #[test]
+    fn into_iter_owned() {
+        //test into_iter for the owned version, which consumes the hashmap
+        let mut dictionary: HashMap<&str, i32> = HashMap::new();
+        //Insert foo, bar, and baz
+        dictionary.insert("foo", 45);
+        dictionary.insert("bar", 46);
+        dictionary.insert("baz", 47);
+
+        for (key, value) in dictionary {
+            match key {
+                "foo" => assert_eq!(value, 45),
+                "bar" => assert_eq!(value, 46),
+                "baz" => assert_eq!(value, 47),
+                _ => unreachable!(),
+            }
+        }
+    }
+}
