@@ -16,6 +16,10 @@ The HashMap begins with all of the elements set to `BucketOccupied::Vacant`. Whe
 containing the Key, Value pair in question. When a field is deleted, the deletion is lazy, so the enum in question is replaced with `BucketOccipied::Deleted`. The HashMap ignores deleted fields for the purpose of search, but will allow a new insertion to replace a deleted field.
 Deleted fields are cleaned up only when the array is resized. The trade-off is therefore faster deletion but more frequent array resizes.
 
+## Iteration
+
+`IntoIterator` is implemented for both the borrowed `&'a HashMap<K, V>` and owned `HashMap<K, V>` HashMaps. Therefore, both versions can be iterated over in a for loop, with each iteration returning the (key, value) pairs in the HashMap with type dependent on whether the HashMap is borrowed or owned.
+
 ## Future Additions
 
-So far, only the basic methods of HashMap interaction are coded. I plan on adding Iterator-related methods, as well as the Entry API.
+In the future, I plan on adding the Borrow component to the HashMap, as well as maybe adding the entry API.
