@@ -14,7 +14,9 @@ pub enum BucketOccupied<K, V> {
 
 pub struct HashMap<K, V> {
     buckets: Vec<BucketOccupied<K, V>>,
+    //number of elements in the Vector that are not BucketOccupied::Vacant
     item_count: usize,
+    //number of elements in the Vector that are BucketOccupied::Deleted
     deleted_count: usize,
 }
 
@@ -37,7 +39,7 @@ where
         //Determine the initial hash location
         let mut hasher = DefaultHasher::new();
         key.hash(&mut hasher);
-        (hasher.finish() % self.buckets.len() as u64) as usize
+        return (hasher.finish() % self.buckets.len() as u64) as usize;
     }
 
     pub fn find_key_location(&self, key: &K) -> Option<usize> {
