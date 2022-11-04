@@ -2,6 +2,7 @@ use std::borrow::Borrow;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::hash::{BuildHasher, Hasher};
+
 pub enum BucketOccupied<K, V> {
     //Every Bucket in this scheme can either be either:
     // 1. Occupied (with a key,value pair)

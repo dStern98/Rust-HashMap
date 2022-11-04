@@ -19,7 +19,3 @@ Deleted fields are cleaned up only when the array is resized. The trade-off is t
 ## Iteration
 
 `IntoIterator` is implemented for both the borrowed `&'a HashMap<K, V>` and owned `HashMap<K, V>` HashMaps. Therefore, both versions can be iterated over in a for loop, with each iteration returning the (key, value) pairs in the HashMap with type dependent on whether the HashMap is borrowed or owned.
-
-## Future Additions
-
-In the future, I plan on adding the Borrow component to the HashMap, as well as maybe adding the entry API.
