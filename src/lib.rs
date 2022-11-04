@@ -1,7 +1,7 @@
+use std::borrow::Borrow;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::hash::{BuildHasher, Hasher};
-
 pub enum BucketOccupied<K, V> {
     //Every Bucket in this scheme can either be either:
     // 1. Occupied (with a key,value pair)
@@ -32,9 +32,10 @@ where
         }
     }
 
-    pub fn bucket(&self, key: &K) -> usize
+    fn bucket<Q>(&self, key: &Q) -> usize
     where
-        K: Hash + Eq,
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
     {
         //Determine the initial hash location
         let mut hasher = DefaultHasher::new();
@@ -42,7 +43,11 @@ where
         return (hasher.finish() % self.buckets.len() as u64) as usize;
     }
 
-    pub fn find_key_location(&self, key: &K) -> Option<usize> {
+    fn find_key_location<Q>(&self, key: &Q) -> Option<usize>
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
+    {
         //The logic of Open Addressing for finding a key in the HashMap
         //First, determine the original hash location
         let mut hash_location = self.bucket(key);
@@ -59,7 +64,7 @@ where
                     //If the Bucket is Occupied, then we need to check if the key is equal
                     //to the search key
                     BucketOccupied::Occupied((ref ekey, _)) => {
-                        if key == ekey {
+                        if key == ekey.borrow() {
                             return Some(hash_location);
                         } else {
                             hash_location += 1;
@@ -74,7 +79,11 @@ where
         }
     }
 
-    pub fn find_key_insert_location(&self, key: &K) -> usize {
+    fn find_key_insert_location<Q>(&self, key: &Q) -> usize
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
+    {
         //Finding where to insert a Key in the HashMap
         let mut hash_location = self.bucket(key);
         loop {
@@ -87,7 +96,7 @@ where
                     //If the Bucket is Occupied, then we need to check if the key is equal
                     //to the search key. Return the hash_location if the key == the current occupied key.
                     BucketOccupied::Occupied((ref ekey, _)) => {
-                        if key == ekey {
+                        if key == ekey.borrow() {
                             return hash_location;
                         } else {
                             hash_location += 1;
@@ -166,9 +175,10 @@ where
         }
     }
 
-    pub fn remove(&mut self, key: &K) -> Option<V>
+    pub fn remove<Q>(&mut self, key: &Q) -> Option<V>
     where
-        V: Hash + Eq,
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
     {
         if let Some(key_location) = self.find_key_location(key) {
             self.deleted_count += 1;
@@ -183,9 +193,10 @@ where
         return None;
     }
 
-    pub fn get(&self, key: &K) -> Option<&V>
+    pub fn get<Q>(&self, key: &Q) -> Option<&V>
     where
-        K: Hash + Eq,
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
     {
         if self.buckets.len() == 0 {
             return None;
@@ -210,7 +221,11 @@ where
         self.item_count - self.deleted_count
     }
 
-    pub fn contains_key(&self, key: &K) -> bool {
+    pub fn contains_key<Q>(&self, key: &Q) -> bool
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
+    {
         //Returns True if the Key is in the HashMap
         self.get(key).is_some()
     }
@@ -435,5 +450,22 @@ mod tests {
                 _ => unreachable!(),
             }
         }
+    }
+    #[test]
+    fn test_borrow_str() {
+        //test the hashmap where K: String and we use get and remove with type &str
+        let mut dictionary = HashMap::new();
+        //Insert foo, bar, and baz
+        dictionary.insert("foo".to_string(), 45);
+        dictionary.insert("bar".to_string(), 46);
+        dictionary.insert("baz".to_string(), 47);
+
+        //Because get and remove take &Q where K: Borrow<Q>,
+        //We can get and remove the Strings using an &str as input
+        assert_eq!(dictionary.len(), 3);
+        assert_eq!(dictionary.get("foo"), Some(&45));
+        dictionary.remove("foo");
+        assert_eq!(dictionary.len(), 2);
+        assert_eq!(dictionary.get("foo"), None);
     }
 }
