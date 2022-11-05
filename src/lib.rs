@@ -1,7 +1,6 @@
 use std::borrow::Borrow;
 use std::collections::hash_map::DefaultHasher;
-use std::hash::Hash;
-use std::hash::{BuildHasher, Hasher};
+use std::hash::{Hash, Hasher};
 
 pub enum BucketOccupied<K, V> {
     //Every Bucket in this scheme can either be either:
@@ -253,6 +252,20 @@ pub struct IntoIter<K, V> {
     vec_of_occupied: Vec<(K, V)>,
 }
 
+pub struct IterMut<'a, K, V> {
+    //Version of Iter struct where Values are mutable
+    vec_of_occupied: Vec<(&'a K, &'a mut V)>,
+}
+
+impl<'a, K, V> Iterator for IterMut<'a, K, V> {
+    type Item = (&'a K, &'a mut V);
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(inner_tuple) = self.vec_of_occupied.pop() {
+            return Some(inner_tuple);
+        }
+        return None;
+    }
+}
 impl<'a, K, V> Iterator for Iter<'a, K, V> {
     type Item = (&'a K, &'a V);
     fn next(&mut self) -> Option<Self::Item> {
@@ -297,6 +310,36 @@ impl<K, V> IntoIterator for HashMap<K, V> {
     }
 }
 
+impl<'a, K, V> HashMap<K, V> {
+    fn iter_mut(&'a mut self) -> IterMut<'a, K, V> {
+        //Allow for mutable iteration of the values in the HashMap
+        let mut outbound_vector = Vec::new();
+        for item in self.buckets.iter_mut() {
+            if let BucketOccupied::Occupied((key, value)) = item {
+                //Dereference key and then reference to ensure that its reference is immutable
+                outbound_vector.push((&*key, value));
+            }
+        }
+        return IterMut {
+            vec_of_occupied: outbound_vector,
+        };
+    }
+}
+
+impl<K, V, const N: usize> From<[(K, V); N]> for HashMap<K, V>
+where
+    K: Hash + Eq,
+{
+    fn from(arr: [(K, V); N]) -> Self {
+        //Allows the building of a new HashMap from an Array of Tuples
+        let mut new_hashmap = HashMap::new();
+        for (key, value) in arr {
+            new_hashmap.insert(key, value);
+        }
+        return new_hashmap;
+    }
+}
+
 impl<'a, K, V> IntoIterator for &'a HashMap<K, V> {
     type Item = (&'a K, &'a V);
     type IntoIter = Iter<'a, K, V>;
@@ -313,6 +356,31 @@ impl<'a, K, V> IntoIterator for &'a HashMap<K, V> {
         Iter {
             vec_of_occupied: outbound_vector,
         }
+    }
+}
+
+impl<K, V> PartialEq<HashMap<K, V>> for HashMap<K, V>
+where
+    K: Eq + Hash,
+    V: PartialEq,
+{
+    //We define how to determine if two HashMaps are equal
+    fn eq(&self, other: &HashMap<K, V>) -> bool {
+        //First check the length. If length is not equal, return false
+        if self.len() != other.len() {
+            return false;
+        }
+        //If the len is equal, then we just have to iterate over one of the maps,
+        //and check that the value in the other hashmap is the same
+        for (key, value) in self {
+            if let Some(other_value) = other.get(key) {
+                if value != other_value {
+                    return false;
+                }
+            }
+        }
+        //If we finish iterating without returning, then the maps are identical
+        return true;
     }
 }
 
@@ -468,5 +536,43 @@ mod tests {
         dictionary.remove("foo");
         assert_eq!(dictionary.len(), 2);
         assert_eq!(dictionary.get("foo"), None);
+    }
+
+    #[test]
+    fn test_iter_mut() {
+        let mut dictionary = HashMap::new();
+        dictionary.insert("a", 1);
+        dictionary.insert("b", 2);
+        dictionary.insert("c", 3);
+
+        // Double all of the values
+        for (_, val) in dictionary.iter_mut() {
+            *val *= 2;
+        }
+        //Check that all of the values got doubled
+        assert_eq!(dictionary.get(&"a"), Some(&2));
+        assert_eq!(dictionary.get(&"b"), Some(&4));
+        assert_eq!(dictionary.get(&"c"), Some(&6));
+    }
+
+    #[test]
+    fn test_from() {
+        //Check that we can build a HashMap from an array of tuples
+        let dictionary = HashMap::from([("a", 1), ("b", 2), ("c", 3)]);
+        assert_eq!(dictionary.get(&"a"), Some(&1));
+        assert_eq!(dictionary.get(&"b"), Some(&2));
+        assert_eq!(dictionary.get(&"c"), Some(&3));
+    }
+
+    #[test]
+    fn test_eq() {
+        //Check that the eq logic works
+        let mut dictionary = HashMap::from([("a", 1), ("b", 2), ("c", 3)]);
+        let mut dictionary2 = HashMap::from([("a", 1), ("b", 2), ("c", 3)]);
+        assert_eq!(dictionary == dictionary2, true);
+        dictionary2.remove("a");
+        assert_eq!(dictionary == dictionary2, false);
+        dictionary.remove("a");
+        assert_eq!(dictionary == dictionary2, true);
     }
 }
