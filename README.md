@@ -16,10 +16,26 @@ The HashMap begins with all of the elements set to `BucketOccupied::Vacant`. Whe
 containing the Key, Value pair in question. When a field is deleted, the deletion is lazy, so the enum in question is replaced with `BucketOccipied::Deleted`. The HashMap ignores deleted fields for the purpose of search, but will allow a new insertion to replace a deleted field.
 Deleted fields are cleaned up only when the array is resized. The trade-off is therefore faster deletion but more frequent array resizes.
 
+## Basic Usage
+
+Basic HashMap usage is as follows:
+
+1. `pub fn new() -> Self`: Creates a new empty HashMap. No allocations occur
+   until the first insertion.
+2. `pub fn insert(&mut self, key: K, value: V) -> Option<V>`: Inserts the key-value pair (key, value). If the key was already in the HashMap, the old value is returned as an option. If the key did not previously exist in the HashMap, None is returned.
+3. `pub fn remove<Q>(&mut self, key: &Q) -> Option<V>`: Remove the key from
+   the HashMap, if it exists. If it does, the deleted value is returned as an
+   Some(value), otherwise None is returned.
+4. `pub fn get<Q>(&self, key: &Q) -> Option<&V>`/`pub fn get_mut<Q>(&mut self, key: &Q) -> Option<&mut V>`: Obtain an immutable or mutable reference to the value corresponding to key, if it exists in the HashMap. None is returned if the key does not exist.
+5. `pub fn clear(&mut self)`: Clears the HashMap, but keeps the same memory allocation.
+6. `pub fn contains_key<Q>(&self, key: &Q) -> bool`: Whether or not the key
+   exists in the HashMap.
+7. `pub fn is_empty(&self) -> bool `/ `pub fn len(&self) -> usize`: Whether the HashMap is empty and the number of key/value pairs currently in the HashMap.
+
 ## Iteration
 
-`IntoIterator` is implemented for both the borrowed `&'a HashMap<K, V>` and owned `HashMap<K, V>` HashMaps. Therefore, both versions can be iterated over in a for loop, with each iteration returning the (key, value) pairs in the HashMap with type dependent on whether the HashMap is borrowed or owned. The method `iter_mut` allows for iteration over the HashMap with a mutable reference to the value, with the Iterator Item: `(&'a K, &'a mut V)`. Finally, the method `from` allows a new HashMap to be built from an array `[(K, V); N]`.
+`IntoIterator` is implemented for both the borrowed `&'a HashMap<K, V>` and owned `HashMap<K, V>` HashMaps. Therefore, both versions can be iterated over in a for loop, with each iteration returning the (key, value) pairs in the HashMap with type dependent on whether the HashMap is borrowed or owned. The methods `iter_mut` and `iter` allow for iteration over the HashMap with a mutable/immutable reference to the value, with the Iterator Item: `(&'a K, &'a mut V)/(&'a K, &'a V)` respectivaly. Finally, the method `from` allows a new HashMap to be built from an array `[(K, V); N]`. In addition, the methods `keys()` and `values()` allow for convenient iteration over the HashMap's keys or values. All Iterator structs can be found in the file `iterators.rs`.
 
 ## PartialEq
 
-The function `eq` is defined for the HashMap as well, to allow for HashMap equality comparison.
+The method `eq` is defined for the HashMap as well, to allow for HashMap equality comparison.
