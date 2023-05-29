@@ -3,6 +3,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 mod iterators;
 use iterators::{IntoIter, Iter, IterMut, Keys, Values};
+use std::fmt;
 
 #[derive(Debug)]
 pub enum BucketOccupied<K, V> {
@@ -23,6 +24,21 @@ pub struct HashMap<K, V> {
     not_vacant_count: usize,
     ///number of elements in the Vector that are BucketOccupied::Deleted
     deleted_count: usize,
+}
+
+impl<K, V> fmt::Display for HashMap<K, V>
+where
+    K: fmt::Display,
+    V: fmt::Display,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        //! JSON-like display for a HashMap.
+        write!(f, "{{")?;
+        for (key, value) in self.iter() {
+            write!(f, "{}: {}, ", key, value)?;
+        }
+        write!(f, "}}")
+    }
 }
 
 impl<K, V> HashMap<K, V>

@@ -34,7 +34,7 @@ Basic HashMap usage is as follows:
 
 ## Iteration
 
-`IntoIterator` is implemented for both the borrowed `&'a HashMap<K, V>` and owned `HashMap<K, V>` HashMaps. Therefore, both versions can be iterated over in a for loop, with each iteration returning the (key, value) pairs in the HashMap with type dependent on whether the HashMap is borrowed or owned. The methods `iter_mut` and `iter` allow for iteration over the HashMap with a mutable/immutable reference to the value, with the Iterator Item: `(&'a K, &'a mut V)/(&'a K, &'a V)` respectivaly. Finally, the method `from` allows a new HashMap to be built from an array `[(K, V); N]`. In addition, the methods `keys()` and `values()` allow for convenient iteration over the HashMap's keys or values. All Iterator structs can be found in the file `iterators.rs`.
+`IntoIterator` is implemented for both the borrowed `&'a HashMap<K, V>` and owned `HashMap<K, V>` HashMaps. Therefore, both versions can be iterated over in a for loop, with each iteration returning the (key, value) pairs in the HashMap with type dependent on whether the HashMap is borrowed or owned. The methods `iter_mut` and `iter` allow for iteration over the HashMap with a mutable/immutable reference to the value, with the Iterator Item: `(&'a K, &'a mut V)/(&'a K, &'a V)` respectively. Finally, the method `from` allows a new HashMap to be built from an array `[(K, V); N]`. In addition, the methods `keys()` and `values()` allow for convenient iteration over the HashMap's keys or values. All Iterator structs can be found in the file `iterators.rs`.
 
 ## PartialEq
 
