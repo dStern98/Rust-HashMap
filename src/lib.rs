@@ -46,9 +46,8 @@ where
     K: Hash + Eq,
 {
     pub fn new() -> Self {
+        //! Builds an empty HashMap with zero capacity.
         HashMap {
-            //Starting the Vec with non-zero capacity
-            //avoids a whole host of bugs.
             buckets: Vec::new(),
             not_vacant_count: 0,
             deleted_count: 0,
