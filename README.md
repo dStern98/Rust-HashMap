@@ -14,7 +14,7 @@ Deleted,
 
 The HashMap begins with all of the elements set to `BucketOccupied::Vacant`. When a (key,value) pair is inserted, the vector element is changed to `BucketOccupied::Occupied(K,V)`,
 containing the Key, Value pair in question. When a field is deleted, the deletion is lazy, so the enum in question is replaced with `BucketOccipied::Deleted`. The HashMap ignores deleted fields for the purpose of search, but will allow a new insertion to replace a deleted field.
-Deleted fields are cleaned up only when the array is resized. The trade-off is therefore faster deletion but more frequent array resizes.
+Deleted fields are cleaned up only when the array is resized. The trade-off is therefore faster deletion but more frequent array resizes. The HashMap vector is sparse, and could be optimizted in terms of memory and iteration by using the Python dictionary design shown [here](https://mail.python.org/pipermail/python-dev/2012-December/123028.html) in a blog by Raymond Hettinger. At the current time, this has not been implemented.
 
 ## Basic Usage
 

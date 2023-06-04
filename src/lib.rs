@@ -1,6 +1,7 @@
 use std::borrow::Borrow;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::mem;
 mod iterators;
 use iterators::{IntoIter, Iter, IterMut, Keys, Values};
 use std::fmt;
@@ -69,7 +70,7 @@ where
         return (hasher.finish() % self.buckets.len() as u64) as usize;
     }
 
-    fn find_key_location<Q>(&self, key: &Q) -> Option<usize>
+    fn lookup_key<Q>(&self, key: &Q) -> Option<usize>
     where
         K: Borrow<Q>,
         Q: Hash + Eq + ?Sized,
@@ -185,11 +186,15 @@ where
         if self.buckets.is_empty() || (self.not_vacant_count + 1) >= 3 * self.buckets.len() / 4 {
             self.resize();
         };
-
+        //Find the Insert Index for the Item.
         let hash_location = self.find_key_insert_location(&key);
-        self.buckets.push(BucketOccupied::Occupied((key, value)));
-        let removed_bucket_item = self.buckets.swap_remove(hash_location);
-        match removed_bucket_item {
+
+        //Swap the new_item with the old_item from the HashMap.
+        let current_item = self.buckets.get_mut(hash_location)?;
+        let old_item = mem::replace(current_item, BucketOccupied::Occupied((key, value)));
+
+        //new_item is now the old_item.
+        match old_item {
             BucketOccupied::Occupied((_, value)) => return Some(value),
             _ => {
                 return {
@@ -215,10 +220,13 @@ where
             return None;
         }
 
-        if let Some(key_location) = self.find_key_location(key) {
+        if let Some(key_location) = self.lookup_key(key) {
             self.deleted_count += 1;
-            self.buckets.push(BucketOccupied::Deleted);
-            let deleted_item = self.buckets.swap_remove(key_location);
+
+            //Swap the item currently at the deletion location with a Deleted Enum variant.
+            let current_item = self.buckets.get_mut(key_location)?;
+            let deleted_item = mem::replace(current_item, BucketOccupied::Deleted);
+
             match deleted_item {
                 BucketOccupied::Occupied((_, old_value)) => return Some(old_value),
 
@@ -244,7 +252,7 @@ where
             return None;
         }
 
-        if let Some(key_location) = self.find_key_location(key) {
+        if let Some(key_location) = self.lookup_key(key) {
             //Inside this block key_location is guranteed to be a valid
             // array index so the below index action is safe from a panic.
             match self.buckets[key_location] {
@@ -265,7 +273,7 @@ where
             return None;
         }
 
-        if let Some(key_location) = self.find_key_location(key) {
+        if let Some(key_location) = self.lookup_key(key) {
             match self.buckets[key_location] {
                 BucketOccupied::Occupied((_, ref mut value)) => return Some(value),
                 _ => unreachable!(),
@@ -439,6 +447,16 @@ mod tests {
     }
 
     #[test]
+    fn test_insert_already_exists() {
+        //!Test that if a key already exists, the old value
+        //! is returned
+        let mut dictionary: HashMap<&str, i32> = HashMap::new();
+        dictionary.insert("foo", 532);
+        let insert_return = dictionary.insert("foo", 533);
+        assert_eq!(insert_return.unwrap(), 532);
+    }
+
+    #[test]
     fn test_get() {
         //! Test Basic gets of a key.
         let mut dictionary: HashMap<&str, i32> = HashMap::new();
@@ -482,6 +500,16 @@ mod tests {
         //Verify that the HashMap is now empty
         assert!(dictionary.is_empty());
         assert_eq!(dictionary.len(), 0);
+    }
+
+    #[test]
+    fn test_remove_already_exists() {
+        //! Test that if a key is deleted that already existed,
+        //! the value is returned.
+        let mut dictionary: HashMap<&str, f32> = HashMap::new();
+        dictionary.insert("delete_me", 2.71828);
+        let delete_return = dictionary.remove("delete_me");
+        assert_eq!(delete_return.unwrap(), 2.71828);
     }
 
     #[test]
@@ -535,7 +563,7 @@ mod tests {
         }
 
         println!("{}", dictionary);
-        //dictionary has not been consumed, so the
+        //dictionary has not been consumed, so this
         //print is valid.
     }
 
@@ -623,7 +651,7 @@ mod tests {
     }
 
     #[test]
-    fn test_eq1() {
+    fn test_eq_lengths_unequal() {
         //! Check that the eq logic works where lengths are unequal.
         let mut dictionary = HashMap::from([("a", 1), ("b", 2), ("c", 3)]);
         let mut dictionary2 = HashMap::from([("a", 1), ("b", 2), ("c", 3)]);
@@ -635,7 +663,7 @@ mod tests {
     }
 
     #[test]
-    fn test_eq2() {
+    fn test_eq_lengths_equal() {
         //! Check that the eq logic works where lengths are equal.
         let mut dictionary = HashMap::from([("a", 1), ("b", 2), ("c", 3)]);
         let mut dictionary2 = HashMap::from([("a", 1), ("b", 3), ("c", 3)]);
