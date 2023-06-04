@@ -245,6 +245,8 @@ where
         }
 
         if let Some(key_location) = self.find_key_location(key) {
+            //Inside this block key_location is guranteed to be a valid
+            // array index so the below index action is safe from a panic.
             match self.buckets[key_location] {
                 BucketOccupied::Occupied((_, ref value)) => return Some(value),
                 _ => unreachable!(),
@@ -309,17 +311,7 @@ impl<'a, K, V> IntoIterator for &'a HashMap<K, V> {
     fn into_iter(self) -> Self::IntoIter {
         //!The IntoIter Struct will only contain the Occupied (key,value) pairs,
         //! specifically an immutable reference to both key and value.
-        let mut outbound_vector = Vec::new();
-
-        //Iterate over the HashMap, and fill the IntoIter struct with the pairs
-        for item in self.buckets.iter() {
-            if let BucketOccupied::Occupied((key, value)) = item {
-                outbound_vector.push((key, value));
-            }
-        }
-        Iter {
-            occupied_items: outbound_vector,
-        }
+        Iter::new(&self.buckets)
     }
 }
 
@@ -329,82 +321,50 @@ impl<K, V> IntoIterator for HashMap<K, V> {
     fn into_iter(self) -> Self::IntoIter {
         //! into_iter consumes self, so we can take ownership of anything in self.
         //!The IntoIter Struct will only contain the Occupied (key,value) pairs
-
-        let vec_of_occupied: Vec<(K, V)> = self
-            .buckets
-            .into_iter()
-            .filter(|item| match item {
-                BucketOccupied::Occupied(_) => true,
-                _ => false,
-            })
-            .map(|item| match item {
-                BucketOccupied::Occupied((key, value)) => (key, value),
-                _ => unreachable!(),
-            })
-            .collect();
-
-        IntoIter {
-            occupied_items: vec_of_occupied,
-        }
+        IntoIter::new(self.buckets)
     }
 }
 
 impl<'a, K, V> HashMap<K, V> {
-    pub fn keys(&'a self) -> Keys<'a, K> {
+    pub fn keys(&'a self) -> Keys<'a, K, V> {
         //!Allow for mutable iteration of the values in the HashMap
-        let mut occupied_keys = Vec::new();
-        for item in self.buckets.iter() {
-            if let BucketOccupied::Occupied((key, _)) = item {
-                //Dereference key and then reference to ensure that its reference is immutable
-                occupied_keys.push(key);
-            }
-        }
-        return Keys {
-            keys: occupied_keys,
-        };
+        return Keys::new(&self.buckets);
     }
 
-    pub fn values(&'a self) -> Values<'a, V> {
+    pub fn values(&'a self) -> Values<'a, K, V> {
         //!Allow for immutable iteration of the HashMap Values
-        let mut occupied_values = Vec::new();
-        for item in self.buckets.iter() {
-            if let BucketOccupied::Occupied((_, value)) = item {
-                //Dereference key and then reference to ensure that its reference is immutable
-                occupied_values.push(value);
-            }
-        }
-        return Values {
-            values: occupied_values,
-        };
+        return Values::new(&self.buckets);
     }
 
-    pub fn iter_mut(&'a mut self) -> IterMut<'a, K, V> {
+    pub fn iter_mut(
+        &'a mut self,
+    ) -> IterMut<impl Iterator<Item = (&'a K, &'a mut V)>, (&'a K, &'a mut V)> {
         //!Allow for mutable iteration of the values in the HashMap
-        let mut vec_of_occupied_mut = Vec::new();
-        for item in self.buckets.iter_mut() {
-            if let BucketOccupied::Occupied((key, value)) = item {
-                //Dereference key and then reference to ensure that its reference is immutable
-                vec_of_occupied_mut.push((&*key, value));
-            }
-        }
+
+        let mutable_bucket_iterator = self
+            .buckets
+            .iter_mut()
+            .filter(|item| {
+                if let BucketOccupied::Occupied(_) = item {
+                    return true;
+                }
+                return false;
+            })
+            .map(|item| {
+                if let BucketOccupied::Occupied((ref key, value)) = item {
+                    return (key, value);
+                } else {
+                    unreachable!();
+                }
+            });
         return IterMut {
-            occupied_items: vec_of_occupied_mut,
+            buckets: mutable_bucket_iterator,
         };
     }
 
     pub fn iter(&'a self) -> Iter<'a, K, V> {
         //! Allow for immutable iteration of items in HashMap.
-        let mut outbound_vector = Vec::new();
-
-        //Iterate over the HashMap, and fill the IntoIter struct with the pairs
-        for item in self.buckets.iter() {
-            if let BucketOccupied::Occupied((key, value)) = item {
-                outbound_vector.push((key, value));
-            }
-        }
-        Iter {
-            occupied_items: outbound_vector,
-        }
+        return Iter::new(&self.buckets);
     }
 }
 
@@ -683,9 +643,9 @@ mod tests {
     #[test]
     fn test_get_keys() {
         //! Test Keys Iterator.
-        let dictionary = HashMap::from([("a", vec![1]), ("b", vec![2, 3])]);
+        let dictionary = HashMap::from([("a", vec![1]), ("b", vec![2, 3]), ("c", vec![10, 11])]);
         let dict_keys: Vec<_> = dictionary.keys().map(|&key| key).collect();
-        assert_eq!(vec!["a", "b"], dict_keys);
+        assert_eq!(vec!["b", "a", "c"], dict_keys);
     }
 
     #[test]
@@ -693,6 +653,6 @@ mod tests {
         //! Test Values Iterator.
         let dictionary = HashMap::from([("a", vec![1]), ("b", vec![2, 3])]);
         let dict_values: Vec<_> = dictionary.values().collect();
-        assert_eq!(vec![&vec![1], &vec![2, 3]], dict_values);
+        assert_eq!(vec![&vec![2, 3], &vec![1]], dict_values);
     }
 }
