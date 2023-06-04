@@ -53,8 +53,12 @@ impl<'a, K, V> Iterator for Values<'a, K, V> {
     type Item = &'a V;
     fn next(&mut self) -> Option<Self::Item> {
         loop {
+            //If the current_index is valid, unwrap the value, otherwise
+            //terminate the iterator.
             let current_item = self.buckets.get(self.iterator_position)?;
             self.iterator_position += 1;
+            //If current_item is Occupied, return it as an option.
+            //Otherwise, simply continue the loop.
             if let BucketOccupied::Occupied((_, value)) = current_item {
                 return Some(value);
             }
@@ -71,12 +75,12 @@ where
     pub buckets: I,
 }
 
-impl<'a, I, K, V> Iterator for IterMut<I, (&'a K, &'a mut V)>
+impl<I, P> Iterator for IterMut<I, P>
 where
-    I: Iterator<Item = (&'a K, &'a mut V)>,
+    I: Iterator<Item = P>,
 {
     // Since I is already the desired iterator, just call next.
-    type Item = (&'a K, &'a mut V);
+    type Item = P;
     fn next(&mut self) -> Option<Self::Item> {
         self.buckets.next()
     }
@@ -96,15 +100,15 @@ impl<K, V> IntoIter<K, V> {
 impl<K, V> Iterator for IntoIter<K, V> {
     type Item = (K, V);
     fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            //The downside of using pop is that the iterator
-            //move from the back to the front of the vec, while the
-            //other iterators move front to back.
-            let current_item = self.buckets.pop()?;
-            if let BucketOccupied::Occupied((key, value)) = current_item {
+        //Here we drain one item at a time from the vec, always
+        //at the front, until the vec is empty.
+        while self.buckets.len() > 0 {
+            let next_item = self.buckets.drain(0..1).next()?;
+            if let BucketOccupied::Occupied((key, value)) = next_item {
                 return Some((key, value));
             }
         }
+        None
     }
 }
 

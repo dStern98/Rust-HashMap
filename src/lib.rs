@@ -419,7 +419,7 @@ mod tests {
 
     #[test]
     fn test_insert() {
-        //!Test Basic Insertion.
+        //!Test Basic Insertion of a key.
         let mut dictionary: HashMap<&str, i32> = HashMap::new();
         assert!(dictionary.is_empty());
         assert_eq!(dictionary.len(), 0);
@@ -440,7 +440,7 @@ mod tests {
 
     #[test]
     fn test_get() {
-        //! Test Basic gets.
+        //! Test Basic gets of a key.
         let mut dictionary: HashMap<&str, i32> = HashMap::new();
         //Insert foo, first checking that get returns None
         assert_eq!(dictionary.get(&"foo"), None);
@@ -458,7 +458,7 @@ mod tests {
 
     #[test]
     fn test_remove() {
-        //! Test removes.
+        //! Test removing a key from the HashMap.
         let mut dictionary: HashMap<&str, i32> = HashMap::new();
         //Insert foo, bar, and baz
         dictionary.insert("foo", 45);
@@ -533,6 +533,10 @@ mod tests {
                 _ => unreachable!(),
             }
         }
+
+        println!("{}", dictionary);
+        //dictionary has not been consumed, so the
+        //print is valid.
     }
 
     #[test]
@@ -592,7 +596,8 @@ mod tests {
 
     #[test]
     fn test_iter() {
-        //! Test an immutable loop.
+        //! Test a loop where the key, value pairs are immutable
+        //! references.
         let mut dictionary = HashMap::new();
         dictionary.insert("a".to_owned(), 1.3);
         dictionary.insert("b".to_owned(), 2.7);
@@ -632,25 +637,28 @@ mod tests {
     #[test]
     fn test_eq2() {
         //! Check that the eq logic works where lengths are equal.
-        let dictionary = HashMap::from([("a", 1), ("b", 2), ("c", 3)]);
+        let mut dictionary = HashMap::from([("a", 1), ("b", 2), ("c", 3)]);
         let mut dictionary2 = HashMap::from([("a", 1), ("b", 3), ("c", 3)]);
 
         assert_eq!(dictionary == dictionary2, false);
         dictionary2.insert("b", 2);
         assert_eq!(dictionary == dictionary2, true);
+
+        dictionary.insert("c", 4);
+        assert_eq!(dictionary == dictionary2, false);
     }
 
     #[test]
-    fn test_get_keys() {
-        //! Test Keys Iterator.
+    fn test_keys_iterator() {
+        //! Test Keys Iterator by collecting into a vec.
         let dictionary = HashMap::from([("a", vec![1]), ("b", vec![2, 3]), ("c", vec![10, 11])]);
         let dict_keys: Vec<_> = dictionary.keys().map(|&key| key).collect();
         assert_eq!(vec!["b", "a", "c"], dict_keys);
     }
 
     #[test]
-    fn test_get_values() {
-        //! Test Values Iterator.
+    fn test_values_iterator() {
+        //! Test Values Iterator by collecting into a vec.
         let dictionary = HashMap::from([("a", vec![1]), ("b", vec![2, 3])]);
         let dict_values: Vec<_> = dictionary.values().collect();
         assert_eq!(vec![&vec![2, 3], &vec![1]], dict_values);
