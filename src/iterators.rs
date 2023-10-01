@@ -11,10 +11,10 @@ pub struct Keys<'a, K, V> {
 impl<'a, K, V> Keys<'a, K, V> {
     pub fn new(buckets: &'a Vec<BucketOccupied<K, V>>) -> Self {
         //Returns a new empty Keys struct.
-        return Keys {
+        Keys {
             iterator_position: 0,
             buckets,
-        };
+        }
     }
 }
 
@@ -93,7 +93,7 @@ pub struct IntoIter<K, V> {
 
 impl<K, V> IntoIter<K, V> {
     pub fn new(buckets: Vec<BucketOccupied<K, V>>) -> Self {
-        return IntoIter { buckets };
+        IntoIter { buckets }
     }
 }
 
@@ -122,10 +122,10 @@ pub struct Iter<'a, K, V> {
 impl<'a, K, V> Iter<'a, K, V> {
     pub fn new(buckets: &'a Vec<BucketOccupied<K, V>>) -> Self {
         //Create a new Iter starting at position 0.
-        return Iter {
+        Iter {
             iterator_position: 0,
             buckets,
-        };
+        }
     }
 }
 

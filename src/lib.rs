@@ -67,7 +67,7 @@ where
         }
         let mut hasher = DefaultHasher::new();
         key.hash(&mut hasher);
-        return (hasher.finish() % self.buckets.len() as u64) as usize;
+        (hasher.finish() % self.buckets.len() as u64) as usize
     }
 
     fn lookup_key<Q>(&self, key: &Q) -> Option<usize>
@@ -195,15 +195,13 @@ where
 
         //new_item is now the old_item.
         match old_item {
-            BucketOccupied::Occupied((_, value)) => return Some(value),
+            BucketOccupied::Occupied((_, value)) => Some(value),
             _ => {
-                return {
-                    //Only increment the count if there is nothing to return (meaning)
-                    // a brand new item has been added to the HashMap. Otherwise,
-                    // an old value was overwritten, and the count should stay the same.
-                    self.not_vacant_count += 1;
-                    None
-                };
+                //Only increment the count if there is nothing to return (meaning)
+                // a brand new item has been added to the HashMap. Otherwise,
+                // an old value was overwritten, and the count should stay the same.
+                self.not_vacant_count += 1;
+                None
             }
         }
     }
@@ -238,7 +236,7 @@ where
             };
         };
 
-        return None;
+        None
     }
 
     pub fn get<Q>(&self, key: &Q) -> Option<&V>
@@ -336,12 +334,12 @@ impl<K, V> IntoIterator for HashMap<K, V> {
 impl<'a, K, V> HashMap<K, V> {
     pub fn keys(&'a self) -> Keys<'a, K, V> {
         //!Allow for mutable iteration of the values in the HashMap
-        return Keys::new(&self.buckets);
+        Keys::new(&self.buckets)
     }
 
     pub fn values(&'a self) -> Values<'a, K, V> {
         //!Allow for immutable iteration of the HashMap Values
-        return Values::new(&self.buckets);
+        Values::new(&self.buckets)
     }
 
     pub fn iter_mut(
@@ -356,7 +354,7 @@ impl<'a, K, V> HashMap<K, V> {
                 if let BucketOccupied::Occupied(_) = item {
                     return true;
                 }
-                return false;
+                false
             })
             .map(|item| {
                 if let BucketOccupied::Occupied((ref key, value)) = item {
@@ -365,14 +363,14 @@ impl<'a, K, V> HashMap<K, V> {
                     unreachable!();
                 }
             });
-        return IterMut {
+        IterMut {
             buckets: mutable_bucket_iterator,
-        };
+        }
     }
 
     pub fn iter(&'a self) -> Iter<'a, K, V> {
         //! Allow for immutable iteration of items in HashMap.
-        return Iter::new(&self.buckets);
+        Iter::new(&self.buckets)
     }
 }
 
@@ -386,7 +384,7 @@ where
         for (key, value) in arr {
             new_hashmap.insert(key, value);
         }
-        return new_hashmap;
+        new_hashmap
     }
 }
 
@@ -417,7 +415,7 @@ where
             }
         }
         //If we finish iterating without returning, then the maps are identical
-        return true;
+        true
     }
 }
 
