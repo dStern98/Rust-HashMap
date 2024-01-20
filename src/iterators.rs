@@ -42,10 +42,10 @@ pub struct Values<'a, K, V> {
 impl<'a, K, V> Values<'a, K, V> {
     pub fn new(buckets: &'a Vec<BucketOccupied<K, V>>) -> Self {
         //Initialize a new Values iterator.
-        return Values {
+        Values {
             iterator_position: 0,
             buckets,
-        };
+        }
     }
 }
 
@@ -102,7 +102,7 @@ impl<K, V> Iterator for IntoIter<K, V> {
     fn next(&mut self) -> Option<Self::Item> {
         //Here we drain one item at a time from the vec, always
         //at the front, until the vec is empty.
-        while self.buckets.len() > 0 {
+        while !self.buckets.is_empty() {
             let next_item = self.buckets.drain(0..1).next()?;
             if let BucketOccupied::Occupied((key, value)) = next_item {
                 return Some((key, value));

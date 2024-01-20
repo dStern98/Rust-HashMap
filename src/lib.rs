@@ -42,6 +42,15 @@ where
     }
 }
 
+impl<K, V> Default for HashMap<K, V>
+where
+    K: Hash + Eq,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<K, V> HashMap<K, V>
 where
     K: Hash + Eq,
@@ -62,7 +71,7 @@ where
     {
         //! Given a key, determine the intial hash location.
 
-        if self.buckets.len() == 0 {
+        if self.buckets.is_empty() {
             panic!("bucket method called with HashMap length 0.");
         }
         let mut hasher = DefaultHasher::new();
@@ -214,7 +223,7 @@ where
         //! Delete the item with key.
         //! If it existed, Some(old_value) is returned.
 
-        if self.buckets.len() == 0 {
+        if self.buckets.is_empty() {
             return None;
         }
 
@@ -246,7 +255,7 @@ where
     {
         //! get the value with key. If it does not exist,
         //! then None is returned.
-        if self.buckets.len() == 0 {
+        if self.buckets.is_empty() {
             return None;
         }
 
@@ -267,7 +276,7 @@ where
         Q: Hash + Eq + ?Sized,
     {
         //! Same as get, but returns a Mutable reference to the value.
-        if self.buckets.len() == 0 {
+        if self.buckets.is_empty() {
             return None;
         }
 
@@ -347,22 +356,13 @@ impl<'a, K, V> HashMap<K, V> {
     ) -> IterMut<impl Iterator<Item = (&'a K, &'a mut V)>, (&'a K, &'a mut V)> {
         //!Allow for mutable iteration of the values in the HashMap
 
-        let mutable_bucket_iterator = self
-            .buckets
-            .iter_mut()
-            .filter(|item| {
-                if let BucketOccupied::Occupied(_) = item {
-                    return true;
-                }
-                false
-            })
-            .map(|item| {
-                if let BucketOccupied::Occupied((ref key, value)) = item {
-                    return (key, value);
-                } else {
-                    unreachable!();
-                }
-            });
+        let mutable_bucket_iterator = self.buckets.iter_mut().filter_map(|bucket_item| {
+            if let BucketOccupied::Occupied((ref key, value)) = bucket_item {
+                return Some((key, value));
+            }
+            None
+        });
+
         IterMut {
             buckets: mutable_bucket_iterator,
         }
