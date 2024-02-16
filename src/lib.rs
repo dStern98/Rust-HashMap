@@ -7,7 +7,7 @@ use iterators::{IntoIter, Iter, IterMut, Keys, Values};
 use std::fmt;
 
 #[derive(Debug)]
-pub enum BucketOccupied<K, V> {
+pub enum Bucket<K, V> {
     ///Every Bucket in this scheme can either be either:
     /// 1. Occupied (with a key,value pair)
     /// 2. Vacant (no value)
@@ -20,7 +20,7 @@ pub enum BucketOccupied<K, V> {
 #[derive(Debug)]
 pub struct HashMap<K, V> {
     ///Vec Storing the actual HashMap items
-    buckets: Vec<BucketOccupied<K, V>>,
+    buckets: Vec<Bucket<K, V>>,
     ///number of elements in the Vector that are not BucketOccupied::Vacant
     not_vacant_count: usize,
     ///number of elements in the Vector that are BucketOccupied::Deleted
@@ -96,19 +96,18 @@ where
             if let Some(vec_item) = self.buckets.get(hash_location) {
                 match vec_item {
                     //If we reach a Vacant, then the key is not in the hashmap
-                    BucketOccupied::Vacant => return None,
+                    Bucket::Vacant => return None,
                     //Skip over Deleted values
-                    BucketOccupied::Deleted => {
+                    Bucket::Deleted => {
                         hash_location += 1;
                     }
                     //If the Bucket is Occupied, then we need to check if the key is equal
                     //to the search key
-                    BucketOccupied::Occupied((ref ekey, _)) => {
+                    Bucket::Occupied((ref ekey, _)) => {
                         if key == ekey.borrow() {
                             return Some(hash_location);
-                        } else {
-                            hash_location += 1;
                         }
+                        hash_location += 1;
                     }
                 }
             } else {
@@ -134,20 +133,17 @@ where
         //Finding where to insert a Key in the HashMap
         let mut hash_location = self.bucket(key);
         loop {
-            if let Some(vec_item) = self.buckets.get(hash_location) {
-                match vec_item {
+            if let Some(bucket) = self.buckets.get(hash_location) {
+                match bucket {
                     //If we reach a Vacant, then that is where the insert location is
-                    BucketOccupied::Vacant => return hash_location,
-                    //Same with Deleted
-                    BucketOccupied::Deleted => return hash_location,
+                    Bucket::Vacant | Bucket::Deleted => return hash_location,
                     //If the Bucket is Occupied, then we need to check if the key is equal
                     //to the search key. Return the hash_location if the key == the current occupied key.
-                    BucketOccupied::Occupied((ref ekey, _)) => {
+                    Bucket::Occupied((ref ekey, _)) => {
                         if key == ekey.borrow() {
                             return hash_location;
-                        } else {
-                            hash_location += 1;
                         }
+                        hash_location += 1;
                     }
                 }
             } else {
@@ -170,19 +166,19 @@ where
             n => 2 * n,
         };
         //Create a new HashMap filled initially with Vacants
-        let mut new_buckets: Vec<BucketOccupied<K, V>> = Vec::with_capacity(new_array_size);
+        let mut new_buckets: Vec<Bucket<K, V>> = Vec::with_capacity(new_array_size);
         for _ in 0..new_array_size {
-            new_buckets.push(BucketOccupied::Vacant);
+            new_buckets.push(Bucket::Vacant);
         }
 
         //Drain the contents of the old hashmap.
-        let old_buckets: Vec<BucketOccupied<K, V>> = self.buckets.drain(..).collect();
+        let old_buckets: Vec<Bucket<K, V>> = self.buckets.drain(..).collect();
         self.buckets = new_buckets;
         self.deleted_count = 0;
         self.not_vacant_count = 0;
 
         for old_bucket_item in old_buckets {
-            if let BucketOccupied::Occupied((key, value)) = old_bucket_item {
+            if let Bucket::Occupied((key, value)) = old_bucket_item {
                 self.insert(key, value);
             }
         }
@@ -200,11 +196,11 @@ where
 
         //Swap the new_item with the old_item from the HashMap.
         let current_item = self.buckets.get_mut(hash_location)?;
-        let old_item = mem::replace(current_item, BucketOccupied::Occupied((key, value)));
+        let old_item = mem::replace(current_item, Bucket::Occupied((key, value)));
 
         //new_item is now the old_item.
         match old_item {
-            BucketOccupied::Occupied((_, value)) => Some(value),
+            Bucket::Occupied((_, value)) => Some(value),
             _ => {
                 //Only increment the count if there is nothing to return (meaning)
                 // a brand new item has been added to the HashMap. Otherwise,
@@ -232,10 +228,10 @@ where
 
             //Swap the item currently at the deletion location with a Deleted Enum variant.
             let current_item = self.buckets.get_mut(key_location)?;
-            let deleted_item = mem::replace(current_item, BucketOccupied::Deleted);
+            let deleted_item = mem::replace(current_item, Bucket::Deleted);
 
             match deleted_item {
-                BucketOccupied::Occupied((_, old_value)) => return Some(old_value),
+                Bucket::Occupied((_, old_value)) => return Some(old_value),
 
                 // The find_key_location method only returns Some when it found
                 //a matching key in the HashMap. It should be guranteed that the deleted_item
@@ -263,7 +259,7 @@ where
             //Inside this block key_location is guranteed to be a valid
             // array index so the below index action is safe from a panic.
             match self.buckets[key_location] {
-                BucketOccupied::Occupied((_, ref value)) => return Some(value),
+                Bucket::Occupied((_, ref value)) => return Some(value),
                 _ => unreachable!(),
             }
         }
@@ -282,7 +278,7 @@ where
 
         if let Some(key_location) = self.lookup_key(key) {
             match self.buckets[key_location] {
-                BucketOccupied::Occupied((_, ref mut value)) => return Some(value),
+                Bucket::Occupied((_, ref mut value)) => return Some(value),
                 _ => unreachable!(),
             }
         }
@@ -313,7 +309,7 @@ where
     pub fn clear(&mut self) {
         //!Clear the HashMap by setting everything to vacant.
         for index in 0..self.buckets.len() {
-            self.buckets[index] = BucketOccupied::Vacant;
+            self.buckets[index] = Bucket::Vacant;
         }
         self.not_vacant_count = 0;
         self.deleted_count = 0;
@@ -357,7 +353,7 @@ impl<'a, K, V> HashMap<K, V> {
         //!Allow for mutable iteration of the values in the HashMap
 
         let mutable_bucket_iterator = self.buckets.iter_mut().filter_map(|bucket_item| {
-            if let BucketOccupied::Occupied((ref key, value)) = bucket_item {
+            if let Bucket::Occupied((ref key, value)) = bucket_item {
                 return Some((key, value));
             }
             None
@@ -688,5 +684,19 @@ mod tests {
         let dictionary = HashMap::from([("a", vec![1]), ("b", vec![2, 3])]);
         let dict_values: Vec<_> = dictionary.values().collect();
         assert_eq!(vec![&vec![2, 3], &vec![1]], dict_values);
+    }
+
+    #[test]
+    fn test_bulk_remove() {
+        let mut new_hash = HashMap::new();
+        for (i, j) in (0..100_000).zip(100_000..200_000) {
+            new_hash.insert(i, j);
+        }
+        for i in 0..100_000 {
+            new_hash.remove(&i);
+        }
+        assert_eq!(new_hash.deleted_count, 100_000);
+        new_hash.insert(5, 7);
+        assert_eq!(new_hash.len(), 1);
     }
 }
