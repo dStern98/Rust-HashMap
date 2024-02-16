@@ -160,14 +160,14 @@ where
         //! Doubles the array size if the array is non-empty.
         //! If the array is empty, sets the size to 2.
 
-        //Double the Array Size
-        let new_array_size = match self.buckets.len() {
+        //Double the capacity
+        let new_capacity = match self.capacity() {
             0 => 2,
             n => 2 * n,
         };
         //Create a new HashMap filled initially with Vacants
-        let mut new_buckets: Vec<Bucket<K, V>> = Vec::with_capacity(new_array_size);
-        for _ in 0..new_array_size {
+        let mut new_buckets: Vec<Bucket<K, V>> = Vec::with_capacity(new_capacity);
+        for _ in 0..new_capacity {
             new_buckets.push(Bucket::Vacant);
         }
 
@@ -188,7 +188,7 @@ where
         //! Insert the Key Pair (key, value). The HashMap is resized if
         //! the map is empty or the map is 3/4 full. If the insertion kicks out
         //! an old value, then the old value is returned.
-        if self.buckets.is_empty() || (self.not_vacant_count + 1) >= 3 * self.buckets.len() / 4 {
+        if self.buckets.is_empty() || (self.not_vacant_count + 1) >= 3 * self.capacity() / 4 {
             self.resize();
         };
         //Find the Insert Index for the Item.
@@ -264,6 +264,24 @@ where
             }
         }
         None
+    }
+
+    pub fn capacity(&self) -> usize {
+        //! How many items can the HashMap store without resizing.
+        self.buckets.len()
+    }
+
+    pub fn with_capacity(capacity: usize) -> HashMap<K, V> {
+        //! Creates an empty HashMap with the specified capacity.
+        let mut buckets = Vec::with_capacity(capacity);
+        for _ in 0..buckets.len() {
+            buckets.push(Bucket::Vacant);
+        }
+        HashMap {
+            buckets,
+            not_vacant_count: 0,
+            deleted_count: 0,
+        }
     }
 
     pub fn get_mut<Q>(&mut self, key: &Q) -> Option<&mut V>
