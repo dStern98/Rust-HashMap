@@ -4,7 +4,7 @@ This is an implementation of the Rust HashMap, essentially copying the API from
 `std::collections::HashMap`. While the method names are taken from the Rust standard library, the implementation was written without any reference to how the Rust standard library actually implements a HashMap. The HashMap uses Open Addressing, and Linear Probing. That means that if the initial hash location is occupied, then we increment the location by 1 continuously until we find an empty spot.
 The HashMap at its core in this implementation is a struct that contains a field buckets, which is a Vector of the enum `Bucket` shown below.
 
-```
+```rust
 pub enum Bucket<K, V> {
 Occupied((K, V)),
 Vacant,
